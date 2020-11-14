@@ -99,6 +99,10 @@ async function wapper() {
   divEl.id = "pokkura";
   divEl.innerHTML = `
   <style scoped>
+  .pokura {
+    display: flex;
+    justify-content: center;
+  }
   .pokuraTable {
     background-color: #feffb7;
     border-collapse: collapse;
@@ -109,7 +113,10 @@ async function wapper() {
   .pokuraTable tr {
     border-bottom: 2px solid #d82f66;
   }
-  .pokuraTable th,td {
+  .pokuraTable th {
+    padding: 4px;
+  }
+  .pokuraTable td {
     padding: 0 4px;
   }
   .pokuraTable td img {
@@ -125,11 +132,35 @@ async function wapper() {
   .profileTable td:first-child {
     font-weight: bold;
   }
+  @media (max-width: 768px) {
+    .pokura {
+      flex-direction: column;
+    }
+    .pokuraTable {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .profileTable {
+      width: auto;
+    }
+    .pokuraTable th:first-child,td:first-child {
+      min-width: 20px;
+    }
+    .pokuraTable th:nth-child(4),td:nth-child(4) {
+      min-width: 40px;
+    }
+    .pokuraTable th:nth-child(5),td:nth-child(5) {
+      min-width: 40px;
+    }
+    .pokuraTable th:nth-child(6),td:nth-child(6) {
+      min-width: 50px;
+    }
+  }
   </style>
   <table class="pokuraTable profileTable"><tr><td>プレーヤー名</td><td>${player}</td></tr><tr><td>ポックラ</td><td>${avg.toFixed(
     2
   )}</td></tr></table>
-  <div style="display: flex; justify-content: center;">
+  <div class="pokura">
   <table class="pokuraTable">
     <tr><th>LV</th><th>ジャンル</th><th>曲名</th><th>スコア</th><th>メダル</th><th>ポックラ</th></tr>
     ${s
