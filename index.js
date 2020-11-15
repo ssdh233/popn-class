@@ -13,6 +13,7 @@ async function wapper() {
     i: 0,
     j: 0,
     k: 3000,
+    none: 0,
   };
 
   function whatever(url, level) {
