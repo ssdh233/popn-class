@@ -160,7 +160,7 @@ async function wapper() {
   </style>
   <table class="pokuraTable profileTable"><tr><td>プレーヤー名</td><td>${player}</td></tr><tr><td>ポックラ</td><td>${avg.toFixed(
     2
-  )}</td></tr></table>
+  )}</td></tr><tr><td>+0.01まであと</td><td>${Math.ceil((1 - avg * 100 % 1) * 5440 * 50 / 100)}</td></tr></table>
   <div class="pokura">
   <table class="pokuraTable">
     <tr><th>LV</th><th>ジャンル</th><th>曲名</th><th>スコア</th><th>メダル</th><th>ポックラ</th></tr>
