@@ -16,6 +16,9 @@ async function wapper() {
     none: 0,
   };
 
+  const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/riddles/playdata";
+  const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/riddles/images/p/common/medal";
+
   function whatever(url, level) {
     return fetch(url)
       .then((res) => res.arrayBuffer())
@@ -29,7 +32,7 @@ async function wapper() {
             li.children[3].textContent,
             li.children[3].firstChild.src
               .replace(
-                "https://eacache.s.konaminet.jp/game/popn/peace/p/images/p/common/medal/meda_",
+                `${MEDAL_IMAGE_URL}/meda_`,
                 ""
               )
               .replace(".png", ""),
@@ -48,13 +51,13 @@ async function wapper() {
                 score < 50000
                   ? 0
                   : Math.floor(
-                      (100 *
-                        (10000 * level +
-                          parseInt(score) -
-                          50000 +
-                          MEDAL_BONUS[medal])) /
-                        5440
-                    ) / 100,
+                    (100 *
+                      (10000 * level +
+                        parseInt(score) -
+                        50000 +
+                        MEDAL_BONUS[medal])) /
+                    5440
+                  ) / 100,
             };
           })
       );
@@ -73,13 +76,13 @@ async function wapper() {
     [5, 48],
   ].map(([page, level]) =>
     whatever(
-      `https://p.eagate.573.jp/game/popn/peace/p/playdata/mu_lv.html?page=${page}&level=${level}`,
+      `${PLAY_DATA_URL}/mu_lv.html?page=${page}&level=${level}`,
       level
     )
   );
 
   const player = await fetch(
-    "https://p.eagate.573.jp/game/popn/peace/p/playdata/index.html"
+    `${PLAY_DATA_URL}/index.html`
   )
     .then((res) => res.arrayBuffer())
     .then((buffer) => new TextDecoder("Shift_JIS").decode(buffer))
@@ -159,10 +162,10 @@ async function wapper() {
   }
   </style>
   <table class="pokuraTable profileTable"><tr><td>プレーヤー名</td><td>${player}</td></tr><tr><td>ポックラ</td><td>${(
-    Math.floor(avg * 100) / 100
-  ).toFixed(2)}</td></tr><tr><td>+0.01まであと</td><td>${Math.ceil(
-    ((1 - ((avg * 100) % 1)) * 5440 * 50) / 100
-  )}</td></tr></table>
+      Math.floor(avg * 100) / 100
+    ).toFixed(2)}</td></tr><tr><td>+0.01まであと</td><td>${Math.ceil(
+      ((1 - ((avg * 100) % 1)) * 5440 * 50) / 100
+    )}</td></tr></table>
   <div class="pokura">
   <table class="pokuraTable">
     <tr><th>LV</th><th>ジャンル</th><th>曲名</th><th>スコア</th><th>メダル</th><th>ポックラ</th></tr>
@@ -170,10 +173,8 @@ async function wapper() {
       .slice(0, 25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
-            x.score
-          }</td><td><img src="https://eacache.s.konaminet.jp/game/popn/peace/p/images/p/common/medal/meda_${
-            x.medal
+          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${x.score
+          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal
           }.png"></td><td>${x.point.toFixed(2)}</td></tr>`
       )
       .join("")}
@@ -184,10 +185,8 @@ async function wapper() {
       .slice(25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
-            x.score
-          }</td><td><img src="https://eacache.s.konaminet.jp/game/popn/peace/p/images/p/common/medal/meda_${
-            x.medal
+          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${x.score
+          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal
           }.png"></td><td>${x.point.toFixed(2)}</td></tr>`
       )
       .join("")}
