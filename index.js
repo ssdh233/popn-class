@@ -17,7 +17,8 @@ async function wapper() {
   };
 
   const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/riddles/playdata";
-  const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/riddles/images/p/common/medal";
+  const MEDAL_IMAGE_URL =
+    "https://eacache.s.konaminet.jp/game/popn/riddles/images/p/common/medal";
 
   function whatever(url, level) {
     return fetch(url)
@@ -25,22 +26,18 @@ async function wapper() {
       .then((buffer) => new TextDecoder("Shift_JIS").decode(buffer))
       .then((text) => domparser.parseFromString(text, "text/html"))
       .then((doc) => doc.querySelectorAll("ul.mu_list_table > li"))
-      .then((lis) =>
-        Array.from(lis)
+      .then((lis) => {
+        return Array.from(lis)
           .filter((li) => li.firstElementChild.className.startsWith("col"))
           .map((li) => [
             li.children[3].textContent,
             li.children[3].firstChild.src
-              .replace(
-                `${MEDAL_IMAGE_URL}/meda_`,
-                ""
-              )
+              .replace(`${MEDAL_IMAGE_URL}/meda_`, "")
               .replace(".png", ""),
             li.firstElementChild.lastElementChild.textContent,
             li.firstElementChild.firstElementChild.textContent,
           ])
           .map(([score, medal, genre, song]) => {
-            console.log({ song, score, medal });
             return {
               song,
               genre,
@@ -51,39 +48,42 @@ async function wapper() {
                 score < 50000
                   ? 0
                   : Math.floor(
-                    (100 *
-                      (10000 * level +
-                        parseInt(score) -
-                        50000 +
-                        MEDAL_BONUS[medal])) /
-                    5440
-                  ) / 100,
+                      (100 *
+                        (10000 * level +
+                          parseInt(score) -
+                          50000 +
+                          MEDAL_BONUS[medal])) /
+                        5440
+                    ) / 100,
             };
-          })
-      );
+          });
+      });
   }
 
   const promises = [
     [0, 50],
+    [1, 50],
     [0, 49],
     [1, 49],
     [2, 49],
+    [3, 49],
+    [4, 49],
+    [5, 49],
     [0, 48],
     [1, 48],
     [2, 48],
     [3, 48],
     [4, 48],
     [5, 48],
+    [6, 48],
+    [7, 48],
+    [8, 48],
+    [9, 48],
   ].map(([page, level]) =>
-    whatever(
-      `${PLAY_DATA_URL}/mu_lv.html?page=${page}&level=${level}`,
-      level
-    )
+    whatever(`${PLAY_DATA_URL}/mu_lv.html?page=${page}&level=${level}`, level)
   );
 
-  const player = await fetch(
-    `${PLAY_DATA_URL}/index.html`
-  )
+  const player = await fetch(`${PLAY_DATA_URL}/index.html`)
     .then((res) => res.arrayBuffer())
     .then((buffer) => new TextDecoder("Shift_JIS").decode(buffer))
     .then((text) => domparser.parseFromString(text, "text/html"))
@@ -162,10 +162,10 @@ async function wapper() {
   }
   </style>
   <table class="pokuraTable profileTable"><tr><td>プレーヤー名</td><td>${player}</td></tr><tr><td>ポックラ</td><td>${(
-      Math.floor(avg * 100) / 100
-    ).toFixed(2)}</td></tr><tr><td>+0.01まであと</td><td>${Math.ceil(
-      ((1 - ((avg * 100) % 1)) * 5440 * 50) / 100
-    )}</td></tr></table>
+    Math.floor(avg * 100) / 100
+  ).toFixed(2)}</td></tr><tr><td>+0.01まであと</td><td>${Math.ceil(
+    ((1 - ((avg * 100) % 1)) * 5440 * 50) / 100
+  )}</td></tr></table>
   <div class="pokura">
   <table class="pokuraTable">
     <tr><th>LV</th><th>ジャンル</th><th>曲名</th><th>スコア</th><th>メダル</th><th>ポックラ</th></tr>
@@ -173,8 +173,10 @@ async function wapper() {
       .slice(0, 25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${x.score
-          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal
+          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
+            x.score
+          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
+            x.medal
           }.png"></td><td>${x.point.toFixed(2)}</td></tr>`
       )
       .join("")}
@@ -185,8 +187,10 @@ async function wapper() {
       .slice(25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${x.score
-          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal
+          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
+            x.score
+          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
+            x.medal
           }.png"></td><td>${x.point.toFixed(2)}</td></tr>`
       )
       .join("")}
