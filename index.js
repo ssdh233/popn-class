@@ -1,6 +1,9 @@
 async function wapper() {
   let domparser = new DOMParser();
 
+  const VERSION = "v1.0.1";
+  console.log("Running popn class script", VERSION);
+
   const MEDAL_BONUS = {
     a: 5000,
     b: 5000,
@@ -136,6 +139,13 @@ async function wapper() {
   .profileTable td:first-child {
     font-weight: bold;
   }
+  .footnote {
+    font-size: 10px;
+    margin-top: 8px;
+    margin: auto;
+    color: gray;
+    text-align: center;
+  }
   @media (max-width: 768px) {
     .pokura {
       flex-direction: column;
@@ -194,7 +204,10 @@ async function wapper() {
           }.png"></td><td>${x.point.toFixed(2)}</td></tr>`
       )
       .join("")}
-  </table></div>`;
+  </table>
+  </div>
+  <div class="footnote">ポックラスクリプト${VERSION}</div>
+  `;
 
   document.body.innerHTML = "";
   document.body.appendChild(divEl);
