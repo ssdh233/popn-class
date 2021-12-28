@@ -141,8 +141,7 @@ async function wapper() {
   }
   .footnote {
     font-size: 10px;
-    margin-top: 8px;
-    margin: auto;
+    margin: 8px auto;
     color: gray;
     text-align: center;
   }
