@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.0.1";
+  const VERSION = "v1.0.2";
   console.log("Running popn class script", VERSION);
 
   const MEDAL_BONUS = {
@@ -23,10 +23,19 @@ async function wapper() {
   const MEDAL_IMAGE_URL =
     "https://eacache.s.konaminet.jp/game/popn/riddles/images/p/common/medal";
 
+  function resToText(res) {
+    return res.arrayBuffer().then((buffer) => {
+      if (res.headers.get("Content-Type").includes("UTF-8")) {
+        return new TextDecoder().decode(buffer);
+      } else {
+        return new TextDecoder("Shift_JIS").decode(buffer)
+      }
+    })
+  }
+
   function whatever(url, level) {
     return fetch(url)
-      .then((res) => res.arrayBuffer())
-      .then((buffer) => new TextDecoder("Shift_JIS").decode(buffer))
+      .then(resToText)
       .then((text) => domparser.parseFromString(text, "text/html"))
       .then((doc) => doc.querySelectorAll("ul.mu_list_table > li"))
       .then((lis) => {
@@ -51,13 +60,13 @@ async function wapper() {
                 score < 50000
                   ? 0
                   : Math.floor(
-                      (100 *
-                        (10000 * level +
-                          parseInt(score) -
-                          50000 +
-                          MEDAL_BONUS[medal])) /
-                        5440
-                    ) / 100,
+                    (100 *
+                      (10000 * level +
+                        parseInt(score) -
+                        50000 +
+                        MEDAL_BONUS[medal])) /
+                    5440
+                  ) / 100,
             };
           });
       });
@@ -87,8 +96,7 @@ async function wapper() {
   );
 
   const player = await fetch(`${PLAY_DATA_URL}/index.html`)
-    .then((res) => res.arrayBuffer())
-    .then((buffer) => new TextDecoder("Shift_JIS").decode(buffer))
+    .then(resToText)
     .then((text) => domparser.parseFromString(text, "text/html"))
     .then(
       (doc) =>
@@ -100,6 +108,7 @@ async function wapper() {
     .flat()
     .sort((a, b) => b.point - a.point)
     .slice(0, 50);
+  console.log({ s })
   const avg = s.reduce((acc, cur) => acc + cur.point, 0) / 50;
 
   const divEl = document.createElement("div");
@@ -171,10 +180,10 @@ async function wapper() {
   }
   </style>
   <table class="pokuraTable profileTable"><tr><td>プレーヤー名</td><td>${player}</td></tr><tr><td>ポックラ</td><td>${(
-    Math.floor(avg * 100) / 100
-  ).toFixed(2)}</td></tr><tr><td>+0.01まであと</td><td>${Math.ceil(
-    ((1 - ((avg * 100) % 1)) * 5440 * 50) / 100
-  )}</td></tr></table>
+      Math.floor(avg * 100) / 100
+    ).toFixed(2)}</td></tr><tr><td>+0.01まであと</td><td>${Math.ceil(
+      ((1 - ((avg * 100) % 1)) * 5440 * 50) / 100
+    )}</td></tr></table>
   <div class="pokura">
   <table class="pokuraTable">
     <tr><th>LV</th><th>ジャンル</th><th>曲名</th><th>スコア</th><th>メダル</th><th>ポックラ</th></tr>
@@ -182,10 +191,8 @@ async function wapper() {
       .slice(0, 25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
-            x.score
-          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
-            x.medal
+          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${x.score
+          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal
           }.png"></td><td>${x.point.toFixed(2)}</td></tr>`
       )
       .join("")}
@@ -196,10 +203,8 @@ async function wapper() {
       .slice(25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
-            x.score
-          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
-            x.medal
+          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${x.score
+          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal
           }.png"></td><td>${x.point.toFixed(2)}</td></tr>`
       )
       .join("")}
