@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.0.3";
+  const VERSION = "v1.1.0";
   console.log("Running popn class script", VERSION);
 
   const MEDAL_BONUS = {
@@ -19,9 +19,9 @@ async function wapper() {
     none: 0,
   };
 
-  const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/unilab/playdata";
+  const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/jamfizz/playdata";
   const MEDAL_IMAGE_URL =
-    "https://eacache.s.konaminet.jp/game/popn/unilab/images/p/common/medal";
+    "https://eacache.s.konaminet.jp/game/popn/jamfizz/images/p/common/medal";
 
   function resToText(res) {
     return res.arrayBuffer().then((buffer) => {
@@ -92,7 +92,7 @@ async function wapper() {
     [8, 48],
     [9, 48],
   ].map(([page, level]) =>
-    whatever(`${PLAY_DATA_URL}/mu_lv.html?page=${page}&level=${level}`, level)
+    whatever(`${PLAY_DATA_URL}/mu_lv.html?page=${page}&lv=${level}`, level)
   );
 
   const player = await fetch(`${PLAY_DATA_URL}/index.html`)
