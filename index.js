@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.1.0";
+  const VERSION = "v1.1.1";
   console.log("Running popn class script", VERSION);
 
   const MEDAL_BONUS = {
@@ -181,7 +181,7 @@ async function wapper() {
   </style>
   <table class="pokuraTable profileTable"><tr><td>プレーヤー名</td><td>${player}</td></tr><tr><td>ポックラ</td><td>${(
       Math.floor(avg * 100) / 100
-    ).toFixed(2)}</td></tr><tr><td>+0.01まであと</td><td>${Math.ceil(
+    ).toFixed(2)}</td></tr><tr><td>+0.01まであと約</td><td>${Math.ceil(
       ((1 - ((avg * 100) % 1)) * 5440 * 50) / 100
     )}</td></tr></table>
   <div class="pokura">
