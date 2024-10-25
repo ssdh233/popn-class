@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.1.1";
+  const VERSION = "v1.1.2";
   console.log("Running popn class script", VERSION);
 
   const MEDAL_BONUS = {
@@ -46,7 +46,7 @@ async function wapper() {
             li.children[3].firstChild.src
               .replace(`${MEDAL_IMAGE_URL}/meda_`, "")
               .replace(".png", ""),
-            li.firstElementChild.lastElementChild.textContent,
+            li.firstElementChild.childNodes[3].textContent,
             li.firstElementChild.firstElementChild.textContent,
           ])
           .map(([score, medal, genre, song]) => {
