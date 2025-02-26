@@ -1,8 +1,16 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.1.2";
+  const VERSION = "v1.1.3";
   console.log("Running popn class script", VERSION);
+
+  const round = (number, p) => {
+    return Math.round(number * 10 ** p) / 10 ** p;
+  };
+
+  const floor = (number, p) => {
+    return Math.floor(number * 10 ** p) / 10 ** p;
+  };
 
   const MEDAL_BONUS = {
     a: 5000,
@@ -28,9 +36,9 @@ async function wapper() {
       if (res.headers.get("Content-Type").includes("UTF-8")) {
         return new TextDecoder().decode(buffer);
       } else {
-        return new TextDecoder("Shift_JIS").decode(buffer)
+        return new TextDecoder("Shift_JIS").decode(buffer);
       }
-    })
+    });
   }
 
   function whatever(url, level) {
@@ -50,23 +58,22 @@ async function wapper() {
             li.firstElementChild.firstElementChild.textContent,
           ])
           .map(([score, medal, genre, song]) => {
+            let point =
+              score < 50000
+                ? 0
+                : (10000 * level +
+                    parseInt(score) -
+                    50000 +
+                    MEDAL_BONUS[medal]) /
+                  5440;
+            point = floor(round(point, 8), 2);
             return {
               song,
               genre,
               score,
               medal,
               level,
-              point:
-                score < 50000
-                  ? 0
-                  : Math.floor(
-                    (100 *
-                      (10000 * level +
-                        parseInt(score) -
-                        50000 +
-                        MEDAL_BONUS[medal])) /
-                    5440
-                  ) / 100,
+              point,
             };
           });
       });
@@ -104,12 +111,14 @@ async function wapper() {
           .textContent
     );
 
-  const s = (await Promise.all(promises))
+  const first50Points = (await Promise.all(promises))
     .flat()
     .sort((a, b) => b.point - a.point)
     .slice(0, 50);
-  console.log({ s })
-  const avg = s.reduce((acc, cur) => acc + cur.point, 0) / 50;
+  const classPointRaw = round(
+    first50Points.reduce((acc, cur) => acc + cur.point, 0) / 50,
+    8
+  );
 
   const divEl = document.createElement("div");
   divEl.id = "pokkura";
@@ -179,32 +188,37 @@ async function wapper() {
     }
   }
   </style>
-  <table class="pokuraTable profileTable"><tr><td>プレーヤー名</td><td>${player}</td></tr><tr><td>ポックラ</td><td>${(
-      Math.floor(avg * 100) / 100
-    ).toFixed(2)}</td></tr><tr><td>+0.01まであと約</td><td>${Math.ceil(
-      ((1 - ((avg * 100) % 1)) * 5440 * 50) / 100
-    )}</td></tr></table>
+  <table class="pokuraTable profileTable"><tr><td>プレーヤー名</td><td>${player}</td></tr><tr><td>ポックラ</td><td>${floor(
+    classPointRaw,
+    2
+  ).toFixed(2)}</td></tr><tr><td>+0.01まであと約</td><td>${Math.ceil(
+    ((1 - ((classPointRaw * 100) % 1)) * 5440 * 50) / 100
+  )}</td></tr></table>
   <div class="pokura">
   <table class="pokuraTable">
     <tr><th>LV</th><th>ジャンル</th><th>曲名</th><th>スコア</th><th>メダル</th><th>ポックラ</th></tr>
-    ${s
+    ${first50Points
       .slice(0, 25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${x.score
-          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal
+          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
+            x.score
+          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
+            x.medal
           }.png"></td><td>${x.point.toFixed(2)}</td></tr>`
       )
       .join("")}
   </table>
   <table class="pokuraTable">
     <tr><th>LV</th><th>ジャンル</th><th>曲名</th><th>スコア</th><th>メダル</th><th>ポックラ</th></tr>
-    ${s
+    ${first50Points
       .slice(25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${x.score
-          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal
+          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
+            x.score
+          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
+            x.medal
           }.png"></td><td>${x.point.toFixed(2)}</td></tr>`
       )
       .join("")}
