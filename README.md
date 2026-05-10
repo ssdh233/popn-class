@@ -7,6 +7,14 @@
 
 1. 次のスクリプトをブックマークに追加する
 
+High Cheers
+
+```
+javascript: void !function(e){var t=e.createElement("script");t.type="text/javascript",t.src="///cdn.jsdelivr.net/gh/ssdh233/popn-class/dist/bundle-hc.js",e.head.appendChild(t)}(document);
+```
+
+Jam & Fizz
+
 ```
 javascript: void !function(e){var t=e.createElement("script");t.type="text/javascript",t.src="///cdn.jsdelivr.net/gh/ssdh233/popn-class/dist/bundle.js",e.head.appendChild(t)}(document);
 ```
