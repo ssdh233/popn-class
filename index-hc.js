@@ -1,8 +1,14 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.0.0";
+  const VERSION = "v2.1.0";
   console.log("Running popn class script", VERSION);
+
+  const loadingEl = document.createElement("div");
+  loadingEl.style.cssText = "padding:40px;text-align:center;font-size:14px;color:#555;";
+  loadingEl.textContent = "曲データ取得中...";
+  document.body.innerHTML = "";
+  document.body.appendChild(loadingEl);
 
   const round = (number, p) => Math.round(number * 10 ** p) / 10 ** p;
   const floor = (number, p) => Math.floor(number * 10 ** p) / 10 ** p;
@@ -168,9 +174,19 @@ async function wapper() {
 
   const top20New = [...newSongs].sort((a, b) => b.point - a.point).slice(0, 20);
 
-  // 上位60候補だけ mu_detail.html を取得して VERSION スコアで再ランキング
-  const oldCandidates = [...oldSongs].sort((a, b) => b.point - a.point).slice(0, 60);
-  const oldResolved = await Promise.all(oldCandidates.map(fetchVersionScore));
+  // 上位120候補を10件ずつ取得し、現在の40位が次の候補の歴代ポックラを超えたら早期終了
+  const oldCandidates = [...oldSongs].sort((a, b) => b.point - a.point).slice(0, 120);
+  const oldResolved = [];
+  for (let i = 0; i < oldCandidates.length; i += 10) {
+    const batch = oldCandidates.slice(i, i + 10);
+    oldResolved.push(...await Promise.all(batch.map(fetchVersionScore)));
+
+    const nextIndex = i + 10;
+    if (oldResolved.length >= 40 && nextIndex < oldCandidates.length) {
+      const cutoff = [...oldResolved].sort((a, b) => b.point - a.point)[39].point;
+      if (cutoff >= oldCandidates[nextIndex].point) break;
+    }
+  }
   const top40Old = [...oldResolved].sort((a, b) => b.point - a.point).slice(0, 40);
 
   const classPointRaw = round(
