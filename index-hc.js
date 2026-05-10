@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.1.0";
+  const VERSION = "v2.1.1";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -281,10 +281,6 @@ async function wapper() {
     .pokura {
       flex-direction: column;
     }
-    .pokuraTable {
-      width: 100%;
-      margin-bottom: 20px;
-    }
     .pokuraTable th:first-child,td:first-child {
       min-width: 20px;
     }
@@ -308,14 +304,14 @@ async function wapper() {
   <div class="sectionLabel">新曲</div>
   <div class="pokura">
     <table class="pokuraTable">
-      <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:58px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
+      <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
       ${renderRows(top20New)}
     </table>
   </div>
   <div class="sectionLabel">旧曲</div>
   <div class="pokura">
     <table class="pokuraTable">
-      <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:58px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
+      <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
       ${renderRows(top40Old)}
     </table>
   </div>
