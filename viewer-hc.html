@@ -47,6 +47,10 @@
     return [...applyToggleToOldSongs(songs, useEC)].sort((a, b) => b.point - a.point).slice(0, 40);
   }
 
+  function computeAllOldSorted(songs, useEC) {
+    return [...applyToggleToOldSongs(songs, useEC)].sort((a, b) => b.point - a.point);
+  }
+
   const id = new URLSearchParams(location.search).get("id");
   document.body.innerHTML = '<div style="padding:40px;text-align:center;font-size:14px;color:#555;">データ取得中...</div>';
 
@@ -74,18 +78,45 @@
   const top20New = record.top20_new;
   const oldResolved = record.top40_old;
   let useEC = false;
+  let useAssumeEC = false;
+
+  function applyAssumeEC(songs) {
+    return songs.map((song) => {
+      if ((MEDAL_BONUS[song.medal] ?? 0) === 0) {
+        return { ...song, medal: "k", point: calcPoint(song.score, song.level, "k") };
+      }
+      return song;
+    });
+  }
 
   const divEl = document.createElement("div");
   divEl.id = "pokkura";
   document.body.innerHTML = "";
   document.body.appendChild(divEl);
 
-  function renderResult(top40Old) {
-    const classPointRaw = round([...top20New, ...top40Old].reduce((acc, cur) => acc + cur.point, 0), 8);
+  function rerender() {
+    let allOldSorted = computeAllOldSorted(oldResolved, useEC);
+    if (useAssumeEC) allOldSorted = applyAssumeEC(allOldSorted).sort((a, b) => b.point - a.point);
+    const effectiveNew = useAssumeEC ? applyAssumeEC(top20New).sort((a, b) => b.point - a.point) : top20New;
+    renderResult(allOldSorted, effectiveNew);
+  }
+
+  function renderResult(allOldSorted, effectiveNew) {
+    const top40Old = allOldSorted.slice(0, 40);
+    const classPointRaw = round([...effectiveNew, ...top40Old].reduce((acc, cur) => acc + cur.point, 0), 8);
+
+    const reEffectiveNew = useAssumeEC ? applyAssumeEC(top20New) : top20New;
+    const reTop40Old = (ec) => {
+      let songs = computeAllOldSorted(oldResolved, ec);
+      if (useAssumeEC) songs = applyAssumeEC(songs).sort((a, b) => b.point - a.point);
+      return songs.slice(0, 40);
+    };
+    const rePointNoEC = round([...reEffectiveNew, ...reTop40Old(false)].reduce((acc, cur) => acc + cur.point, 0), 8);
+    const rePointWithEC = round([...reEffectiveNew, ...reTop40Old(true)].reduce((acc, cur) => acc + cur.point, 0), 8);
 
     const renderRows = (songs) =>
-      songs.map((x) =>
-        `<tr><td>${x.level}</td><td class="col-genre">${x.genre}</td><td class="col-song">${x.song}</td><td>${x.score}</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal}.png"></td><td>${x.point.toFixed(3)}</td></tr>`
+      songs.map((x, i) =>
+        `<tr><td>${i + 1}</td><td>${x.level}</td><td class="col-genre">${x.genre}</td><td class="col-song">${x.song}</td><td>${x.score}</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal}.png"></td><td>${x.point.toFixed(3)}</td></tr>`
       ).join("");
 
     const createdAt = new Date(record.created_at).toLocaleString("ja-JP");
@@ -138,6 +169,8 @@
   <tr><td>プレーヤー名</td><td>${record.player_name}</td></tr>
   <tr><td>ポックラ（計算値）</td><td>${floor(classPointRaw, 2).toFixed(2)}</td></tr>
   <tr><td>ポックラ（計算値+EASY）</td><td>${record.pokkura2 ?? "-"}</td></tr>
+  <tr><td>re ポックラ（計算値）</td><td>${floor(rePointNoEC, 4).toFixed(4)}</td></tr>
+  <tr><td>re ポックラ（計算値+EASY）</td><td>${floor(rePointWithEC, 4).toFixed(4)}</td></tr>
   <tr><td>ポックラ（実際）</td><td>${record.real_pokkura ?? "-"}</td></tr>
   <tr><td>取得日時</td><td>${createdAt}</td></tr>
   <tr><td>新曲</td><td>${record.new_point}</td></tr>
@@ -146,20 +179,24 @@
 <div class="sectionLabel">新曲</div>
 <div class="pokura">
   <table class="pokuraTable">
-    <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
-    ${renderRows(top20New)}
+    <tr><th style="width:24px">#</th><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
+    ${renderRows(effectiveNew)}
   </table>
 </div>
 <div class="sectionLabel">旧曲</div>
 <div class="pokura">
   <table class="pokuraTable">
-    <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
-    ${renderRows(top40Old)}
+    <tr><th style="width:24px">#</th><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
+    ${renderRows(allOldSorted)}
   </table>
 </div>
 <div class="toggleWrapper">
   <label class="toggleLabel">
     <input type="checkbox" id="toggleEC" ${useEC ? "checked" : ""}> EASY CLEARは歴代メダルに参照
+  </label>
+  <br>
+  <label class="toggleLabel">
+    <input type="checkbox" id="toggleAssumeEC" ${useAssumeEC ? "checked" : ""}> 未クリアをEASY CLEARとみなす
   </label>
 </div>
 <div class="footnote">ポックラスクリプト${record.script_version} / リクエスト数: ${record.request_count} / ${createdAt}</div>
@@ -167,11 +204,15 @@
 
     document.getElementById("toggleEC").addEventListener("change", function () {
       useEC = this.checked;
-      renderResult(computeTop40Old(oldResolved, this.checked));
+      rerender();
+    });
+    document.getElementById("toggleAssumeEC").addEventListener("change", function () {
+      useAssumeEC = this.checked;
+      rerender();
     });
   }
 
-  renderResult(computeTop40Old(oldResolved, useEC));
+  rerender();
 })();
 </script>
 </body>
