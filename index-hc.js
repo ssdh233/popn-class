@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.1.2";
+  const VERSION = "v2.2.0";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -102,6 +102,9 @@ async function wapper() {
     localStorage.setItem(CACHE_KEY, JSON.stringify(versionCache));
   }
 
+  const TOGGLE_KEY = "popn_hc_use_historical_easy_clear";
+  let useHistoricalEC = localStorage.getItem(TOGGLE_KEY) === "true";
+
   // mu_detail.html の EX 難易度から VERSION スコアとメダル（回数推定）を取得
   function parseDetailPage(doc) {
     const section = doc.querySelector("#ex");
@@ -132,27 +135,31 @@ async function wapper() {
   async function fetchVersionScore(song) {
     const cached = versionCache[song.no];
     if (cached && cached.score === song.score) {
-      // 歴代スコアが変わっていなければキャッシュのVERSIONメダルを使う
+      const vm = cached.medal;
+      const hm = song.medal;
       // VERSIONメダルのボーナスが歴代と同じ場合のみ歴代メダルを採用
-      const effectiveMedal = (MEDAL_BONUS[cached.medal] ?? 0) === (MEDAL_BONUS[song.medal] ?? 0) ? song.medal : cached.medal;
+      const effectiveMedal = (MEDAL_BONUS[vm] ?? 0) === (MEDAL_BONUS[hm] ?? 0) ? hm : vm;
       const point = calcPoint(song.score, song.level, effectiveMedal);
-      return { ...song, medal: effectiveMedal, point };
+      return { ...song, historicalMedal: hm, versionMedal: vm, medal: effectiveMedal, point };
     }
 
     const url = `${PLAY_DATA_URL}/mu_detail.html?no=${encodeURIComponent(song.no)}&back=index`;
     const result = await fetchAndParse(url, parseDetailPage);
-    if (!result) return song;
+    if (!result) return { ...song, historicalMedal: song.medal, versionMedal: song.medal };
+
+    const hm = song.medal;
+    const vm = result.medal;
 
     if (result.score === song.score &&
-        (MEDAL_BONUS[result.medal] ?? 0) >= (MEDAL_BONUS[song.medal] ?? 0)) {
-      versionCache[song.no] = { score: song.score, medal: result.medal };
+        (MEDAL_BONUS[vm] ?? 0) >= (MEDAL_BONUS[hm] ?? 0)) {
+      versionCache[song.no] = { score: song.score, medal: vm };
       saveCache();
     }
 
     // VERSIONメダルのボーナスが歴代と同じ場合のみ歴代メダルを採用
-    const effectiveMedal = (MEDAL_BONUS[result.medal] ?? 0) === (MEDAL_BONUS[song.medal] ?? 0) ? song.medal : result.medal;
+    const effectiveMedal = (MEDAL_BONUS[vm] ?? 0) === (MEDAL_BONUS[hm] ?? 0) ? hm : vm;
     const point = calcPoint(result.score, song.level, effectiveMedal);
-    return { ...song, score: result.score, medal: effectiveMedal, point };
+    return { ...song, score: result.score, historicalMedal: hm, versionMedal: vm, medal: effectiveMedal, point };
   }
 
   const [player, ...songPages] = await Promise.all([
@@ -191,28 +198,53 @@ async function wapper() {
       if (cutoff >= oldCandidates[nextIndex].point) break;
     }
   }
-  const top40Old = [...oldResolved].sort((a, b) => b.point - a.point).slice(0, 40);
 
-  const classPointRaw = round(
-    [...top20New, ...top40Old].reduce((acc, cur) => acc + cur.point, 0),
-    8
-  );
+  // トグルON時: historicalMedal が k(EASY) で versionMedal が h(未クリア) の曲は歴代メダルを使用
+  function applyToggleToOldSongs(songs, useEC) {
+    return songs.map((song) => {
+      const hm = song.historicalMedal ?? song.medal;
+      const vm = song.versionMedal ?? song.medal;
+      let effectiveMedal;
+      if (useEC && hm === "k" && (vm === "h" || vm === "none")) {
+        effectiveMedal = "k";
+      } else {
+        effectiveMedal = (MEDAL_BONUS[vm] ?? 0) === (MEDAL_BONUS[hm] ?? 0) ? hm : vm;
+      }
+      const point = calcPoint(song.score, song.level, effectiveMedal);
+      return { ...song, medal: effectiveMedal, point };
+    });
+  }
 
-  const renderRows = (songs) =>
-    songs
-      .map(
-        (x) =>
-          `<tr><td>${x.level}</td><td class="col-genre">${x.genre}</td><td class="col-song">${x.song}</td><td>${
-            x.score
-          }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
-            x.medal
-          }.png"></td><td>${x.point.toFixed(3)}</td></tr>`
-      )
-      .join("");
+  function computeTop40Old(songs, useEC) {
+    return [...applyToggleToOldSongs(songs, useEC)]
+      .sort((a, b) => b.point - a.point)
+      .slice(0, 40);
+  }
 
   const divEl = document.createElement("div");
   divEl.id = "pokkura";
-  divEl.innerHTML = `
+  document.body.innerHTML = "";
+  document.body.appendChild(divEl);
+
+  function renderResult(currentTop40Old) {
+    const classPointRaw = round(
+      [...top20New, ...currentTop40Old].reduce((acc, cur) => acc + cur.point, 0),
+      8
+    );
+
+    const renderRows = (songs) =>
+      songs
+        .map(
+          (x) =>
+            `<tr><td>${x.level}</td><td class="col-genre">${x.genre}</td><td class="col-song">${x.song}</td><td>${
+              x.score
+            }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
+              x.medal
+            }.png"></td><td>${x.point.toFixed(3)}</td></tr>`
+        )
+        .join("");
+
+    divEl.innerHTML = `
   <style scoped>
   #pokkura {
     padding: 16px 24px;
@@ -275,6 +307,16 @@ async function wapper() {
     margin: 10px 0 4px;
     color: #d82f66;
   }
+  .toggleWrapper {
+    margin: 4px 0 6px;
+    text-align: center;
+  }
+  .toggleLabel {
+    cursor: pointer;
+    font-size: 12px;
+    color: #555;
+    user-select: none;
+  }
   .footnote {
     font-size: 10px;
     margin: 8px auto;
@@ -303,7 +345,7 @@ async function wapper() {
     <tr><td>プレーヤー名</td><td>${player}</td></tr>
     <tr><td>ポックラ</td><td>${floor(classPointRaw, 2).toFixed(2)}</td></tr>
     <tr><td>新曲</td><td>${floor(round(top20New.reduce((acc, cur) => acc + cur.point, 0), 8), 2).toFixed(2)}</td></tr>
-    <tr><td>旧曲</td><td>${floor(round(top40Old.reduce((acc, cur) => acc + cur.point, 0), 8), 2).toFixed(2)}</td></tr>
+    <tr><td>旧曲</td><td>${floor(round(currentTop40Old.reduce((acc, cur) => acc + cur.point, 0), 8), 2).toFixed(2)}</td></tr>
   </table>
   <div class="sectionLabel">新曲</div>
   <div class="pokura">
@@ -316,14 +358,25 @@ async function wapper() {
   <div class="pokura">
     <table class="pokuraTable">
       <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
-      ${renderRows(top40Old)}
+      ${renderRows(currentTop40Old)}
     </table>
+  </div>
+  <div class="toggleWrapper">
+    <label class="toggleLabel">
+      <input type="checkbox" id="toggleEC" ${useHistoricalEC ? "checked" : ""}> EASY CLEARは歴代メダルに参照
+    </label>
   </div>
   <div class="footnote">ポックラスクリプト${VERSION}</div>
   `;
 
-  document.body.innerHTML = "";
-  document.body.appendChild(divEl);
+    document.getElementById("toggleEC").addEventListener("change", function () {
+      useHistoricalEC = this.checked;
+      localStorage.setItem(TOGGLE_KEY, this.checked.toString());
+      renderResult(computeTop40Old(oldResolved, this.checked));
+    });
+  }
+
+  renderResult(computeTop40Old(oldResolved, useHistoricalEC));
 }
 
 wapper();
