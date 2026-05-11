@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.1.1";
+  const VERSION = "v2.1.2";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -133,8 +133,10 @@ async function wapper() {
     const cached = versionCache[song.no];
     if (cached && cached.score === song.score) {
       // 歴代スコアが変わっていなければキャッシュのVERSIONメダルを使う
-      const point = calcPoint(song.score, song.level, cached.medal);
-      return { ...song, medal: cached.medal, point };
+      // VERSIONメダルのボーナスが歴代と同じ場合のみ歴代メダルを採用
+      const effectiveMedal = (MEDAL_BONUS[cached.medal] ?? 0) === (MEDAL_BONUS[song.medal] ?? 0) ? song.medal : cached.medal;
+      const point = calcPoint(song.score, song.level, effectiveMedal);
+      return { ...song, medal: effectiveMedal, point };
     }
 
     const url = `${PLAY_DATA_URL}/mu_detail.html?no=${encodeURIComponent(song.no)}&back=index`;
@@ -147,8 +149,10 @@ async function wapper() {
       saveCache();
     }
 
-    const point = calcPoint(result.score, song.level, result.medal);
-    return { ...song, score: result.score, medal: result.medal, point };
+    // VERSIONメダルのボーナスが歴代と同じ場合のみ歴代メダルを採用
+    const effectiveMedal = (MEDAL_BONUS[result.medal] ?? 0) === (MEDAL_BONUS[song.medal] ?? 0) ? song.medal : result.medal;
+    const point = calcPoint(result.score, song.level, effectiveMedal);
+    return { ...song, score: result.score, medal: effectiveMedal, point };
   }
 
   const [player, ...songPages] = await Promise.all([
