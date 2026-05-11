@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポックラ閲覧</title>
+</head>
+<body>
+<script>
+(async function () {
+  const SUPABASE_URL = "https://fnujaznrlerqpyhwhiry.supabase.co/rest/v1/";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZudWphem5ybGVycXB5aHdoaXJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDI1NzgsImV4cCI6MjA5NDAxODU3OH0.GRccND27_3NCgABj6JULYDzWQfhXafkAL17Ws6BIZQQ";
+  const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/popn29/images/p/common/medal";
+
+  const MEDAL_BONUS = {
+    a: 21400, b: 17400, c: 17400, d: 17400,
+    e: 12400, f: 12400, g: 12400,
+    h: 0, i: 0, j: 0,
+    k: 6200, l: 9300, none: 0,
+  };
+
+  const round = (n, p) => Math.round(n * 10 ** p) / 10 ** p;
+  const floor = (n, p) => Math.floor(n * 10 ** p) / 10 ** p;
+
+  function calcPoint(scoreText, level, medal) {
+    const s = parseInt(scoreText);
+    if (isNaN(s) || s < 50000) return 0;
+    return floor(round((level * (3750 * level + (MEDAL_BONUS[medal] ?? 0) + (s - 50000))) / 3880000, 8), 3);
+  }
+
+  function applyToggleToOldSongs(songs, useEC) {
+    return songs.map((song) => {
+      const hm = song.historicalMedal ?? song.medal;
+      const vm = song.versionMedal ?? song.medal;
+      let effectiveMedal;
+      if (useEC && hm === "k" && (vm === "h" || vm === "none")) {
+        effectiveMedal = "k";
+      } else {
+        effectiveMedal = (MEDAL_BONUS[vm] ?? 0) === (MEDAL_BONUS[hm] ?? 0) ? hm : vm;
+      }
+      const point = calcPoint(song.score, song.level, effectiveMedal);
+      return { ...song, medal: effectiveMedal, point };
+    });
+  }
+
+  function computeTop40Old(songs, useEC) {
+    return [...applyToggleToOldSongs(songs, useEC)].sort((a, b) => b.point - a.point).slice(0, 40);
+  }
+
+  const id = new URLSearchParams(location.search).get("id");
+  document.body.innerHTML = '<div style="padding:40px;text-align:center;font-size:14px;color:#555;">データ取得中...</div>';
+
+  if (!id) {
+    document.body.innerHTML = '<div style="padding:40px;text-align:center;">IDを指定してください (?id=uuid)</div>';
+    return;
+  }
+
+  const res = await fetch(`${SUPABASE_URL}pokkura_records?id=eq.${encodeURIComponent(id)}&select=*`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+  });
+
+  const records = await res.json();
+  console.log("Supabase response:", res.status, records);
+  const record = records[0];
+
+  if (!record) {
+    document.body.innerHTML = `<div style="padding:40px;text-align:center;">データが見つかりません<br><small style="color:gray">status: ${res.status} / ${JSON.stringify(records)}</small></div>`;
+    return;
+  }
+
+  const top20New = record.top20_new;
+  const oldResolved = record.top40_old;
+  let useEC = false;
+
+  const divEl = document.createElement("div");
+  divEl.id = "pokkura";
+  document.body.innerHTML = "";
+  document.body.appendChild(divEl);
+
+  function renderResult(top40Old) {
+    const classPointRaw = round([...top20New, ...top40Old].reduce((acc, cur) => acc + cur.point, 0), 8);
+
+    const renderRows = (songs) =>
+      songs.map((x) =>
+        `<tr><td>${x.level}</td><td class="col-genre">${x.genre}</td><td class="col-song">${x.song}</td><td>${x.score}</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal}.png"></td><td>${x.point.toFixed(3)}</td></tr>`
+      ).join("");
+
+    const createdAt = new Date(record.created_at).toLocaleString("ja-JP");
+
+    divEl.innerHTML = `
+<style>
+#pokkura {
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: sans-serif;
+}
+.pokura { display: flex; justify-content: center; }
+.pokuraTable {
+  background-color: #feffb7;
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+  table-layout: fixed;
+  max-width: 600px;
+}
+.pokuraTable tr { border-bottom: 2px solid #d82f66; }
+.pokuraTable th { padding: 4px 8px; white-space: nowrap; text-align: center; }
+.pokuraTable td { padding: 3px 8px; text-align: center; }
+.pokuraTable td img { vertical-align: middle; }
+.col-genre, .col-song { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.profileTable { width: auto; font-size: 13px; }
+.profileTable td { padding: 3px 8px; }
+.profileTable td:first-child { font-weight: bold; white-space: nowrap; }
+.sectionLabel {
+  text-align: center;
+  font-weight: bold;
+  font-size: 13px;
+  margin: 10px 0 4px;
+  color: #d82f66;
+}
+.toggleWrapper { margin: 4px 0 6px; text-align: center; }
+.toggleLabel { cursor: pointer; font-size: 12px; color: #555; user-select: none; }
+.footnote { font-size: 10px; margin: 8px auto; color: gray; text-align: center; }
+@media (max-width: 768px) {
+  .pokura { flex-direction: column; }
+  .pokuraTable th:first-child, td:first-child { min-width: 20px; }
+  .pokuraTable th:nth-child(4), td:nth-child(4) { min-width: 40px; }
+  .pokuraTable th:nth-child(5), td:nth-child(5) { min-width: 40px; }
+  .pokuraTable th:nth-child(6), td:nth-child(6) { min-width: 50px; }
+}
+</style>
+<table class="pokuraTable profileTable">
+  <tr><td>プレーヤー名</td><td>${record.player_name}</td></tr>
+  <tr><td>ポックラ（計算値）</td><td>${floor(classPointRaw, 2).toFixed(2)}</td></tr>
+  <tr><td>ポックラ（計算値+EASY）</td><td>${record.pokkura2 ?? "-"}</td></tr>
+  <tr><td>ポックラ（実際）</td><td>${record.real_pokkura ?? "-"}</td></tr>
+  <tr><td>取得日時</td><td>${createdAt}</td></tr>
+  <tr><td>新曲</td><td>${record.new_point}</td></tr>
+  <tr><td>旧曲</td><td>${floor(round(top40Old.reduce((acc, cur) => acc + cur.point, 0), 8), 2).toFixed(2)}</td></tr>
+</table>
+<div class="sectionLabel">新曲</div>
+<div class="pokura">
+  <table class="pokuraTable">
+    <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
+    ${renderRows(top20New)}
+  </table>
+</div>
+<div class="sectionLabel">旧曲</div>
+<div class="pokura">
+  <table class="pokuraTable">
+    <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
+    ${renderRows(top40Old)}
+  </table>
+</div>
+<div class="toggleWrapper">
+  <label class="toggleLabel">
+    <input type="checkbox" id="toggleEC" ${useEC ? "checked" : ""}> EASY CLEARは歴代メダルに参照
+  </label>
+</div>
+<div class="footnote">ポックラスクリプト${record.script_version} / リクエスト数: ${record.request_count} / ${createdAt}</div>
+`;
+
+    document.getElementById("toggleEC").addEventListener("change", function () {
+      useEC = this.checked;
+      renderResult(computeTop40Old(oldResolved, this.checked));
+    });
+  }
+
+  renderResult(computeTop40Old(oldResolved, useEC));
+})();
+</script>
+</body>
+</html>

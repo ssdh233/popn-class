@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.2.0";
+  const VERSION = "v2.3.0";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -52,7 +52,10 @@ async function wapper() {
     );
   }
 
+  let requestCount = 0;
+
   function fetchAndParse(url, parser) {
+    requestCount++;
     return fetch(url)
       .then(resToText)
       .then((text) => domparser.parseFromString(text, "text/html"))
@@ -104,6 +107,9 @@ async function wapper() {
 
   const TOGGLE_KEY = "popn_hc_use_historical_easy_clear";
   let useHistoricalEC = localStorage.getItem(TOGGLE_KEY) === "true";
+
+  const SUPABASE_URL = "https://fnujaznrlerqpyhwhiry.supabase.co/rest/v1/";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZudWphem5ybGVycXB5aHdoaXJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDI1NzgsImV4cCI6MjA5NDAxODU3OH0.GRccND27_3NCgABj6JULYDzWQfhXafkAL17Ws6BIZQQ";
 
   // mu_detail.html の EX 難易度から VERSION スコアとメダル（回数推定）を取得
   function parseDetailPage(doc) {
@@ -162,11 +168,13 @@ async function wapper() {
     return { ...song, score: result.score, historicalMedal: hm, versionMedal: vm, medal: effectiveMedal, point };
   }
 
-  const [player, ...songPages] = await Promise.all([
+  const [{ player, realPokkura }, ...songPages] = await Promise.all([
     fetchAndParse(
       `${PLAY_DATA_URL}/index.html`,
-      (doc) =>
-        doc.querySelector("#status_table .st_box li:first-child div").textContent
+      (doc) => ({
+        player: doc.querySelector("#status_table .st_box li:first-child div").textContent,
+        realPokkura: parseFloat(doc.querySelector("#popnclass").textContent.trim()) || null,
+      })
     ),
     // 新曲 (version=29): lv49, 48, 47, 46 — 歴代=VERSION前提なのでそのまま使う
     fetchAllLevelPages(29, 49),
@@ -188,6 +196,7 @@ async function wapper() {
   // 上位120候補を10件ずつ取得し、現在の40位が次の候補の歴代ポックラを超えたら早期終了
   const oldCandidates = [...oldSongs].sort((a, b) => b.point - a.point).slice(0, 120);
   const oldResolved = [];
+  let oldCutoffPoint = null;
   for (let i = 0; i < oldCandidates.length; i += 10) {
     const batch = oldCandidates.slice(i, i + 10);
     oldResolved.push(...await Promise.all(batch.map(fetchVersionScore)));
@@ -195,9 +204,13 @@ async function wapper() {
     const nextIndex = i + 10;
     if (oldResolved.length >= 40 && nextIndex < oldCandidates.length) {
       const cutoff = [...oldResolved].sort((a, b) => b.point - a.point)[39].point;
-      if (cutoff >= oldCandidates[nextIndex].point) break;
+      if (cutoff >= oldCandidates[nextIndex].point) {
+        oldCutoffPoint = cutoff;
+        break;
+      }
     }
   }
+  const oldSongsFetched = oldResolved.length;
 
   // トグルON時: historicalMedal が k(EASY) で versionMedal が h(未クリア) の曲は歴代メダルを使用
   function applyToggleToOldSongs(songs, useEC) {
@@ -219,6 +232,41 @@ async function wapper() {
     return [...applyToggleToOldSongs(songs, useEC)]
       .sort((a, b) => b.point - a.point)
       .slice(0, 40);
+  }
+
+  async function uploadRecord() {
+    try {
+      const top40ForUpload = computeTop40Old(oldResolved, false);
+      const top40ForUploadEC = computeTop40Old(oldResolved, true);
+      const classPoint = floor(round([...top20New, ...top40ForUpload].reduce((acc, cur) => acc + cur.point, 0), 8), 2);
+      const classPoint2 = floor(round([...top20New, ...top40ForUploadEC].reduce((acc, cur) => acc + cur.point, 0), 8), 2);
+      await fetch(`${SUPABASE_URL}pokkura_records`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify({
+          player_name: player,
+          pokkura: classPoint,
+          pokkura2: classPoint2,
+          real_pokkura: realPokkura,
+          new_point: floor(round(top20New.reduce((acc, cur) => acc + cur.point, 0), 8), 2),
+          old_point: floor(round(top40ForUpload.reduce((acc, cur) => acc + cur.point, 0), 8), 2),
+          top20_new: top20New,
+          top40_old: oldResolved,
+          old_songs_fetched: oldSongsFetched,
+          old_cutoff_point: oldCutoffPoint,
+          use_historical_ec: useHistoricalEC,
+          request_count: requestCount,
+          script_version: VERSION,
+        }),
+      });
+    } catch (e) {
+      console.error("Failed to upload record:", e);
+    }
   }
 
   const divEl = document.createElement("div");
@@ -377,6 +425,7 @@ async function wapper() {
   }
 
   renderResult(computeTop40Old(oldResolved, useHistoricalEC));
+  uploadRecord();
 }
 
 wapper();
