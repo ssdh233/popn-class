@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.3.0";
+  const VERSION = "v2.3.1";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -240,6 +240,7 @@ async function wapper() {
       const top40ForUploadEC = computeTop40Old(oldResolved, true);
       const classPoint = floor(round([...top20New, ...top40ForUpload].reduce((acc, cur) => acc + cur.point, 0), 8), 2);
       const classPoint2 = floor(round([...top20New, ...top40ForUploadEC].reduce((acc, cur) => acc + cur.point, 0), 8), 2);
+      if (classPoint < 175) return;
       await fetch(`${SUPABASE_URL}pokkura_records`, {
         method: "POST",
         headers: {
