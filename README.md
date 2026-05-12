@@ -33,9 +33,7 @@ yarn build // or yarn build:watch
 
 ## Test
 
-ユニットテストを作ってくださる方大歓迎です><
-
-今はないので手動でテストしてください。
+手動でテストしてください。
 
 ## Creating a PR
 
