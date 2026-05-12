@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.1.3";
+  const VERSION = "v1.2.0";
   console.log("Running popn class script", VERSION);
 
   const round = (number, p) => {
@@ -27,9 +27,11 @@ async function wapper() {
     none: 0,
   };
 
-  const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/jamfizz/playdata";
-  const MEDAL_IMAGE_URL =
-    "https://eacache.s.konaminet.jp/game/popn/jamfizz/images/p/common/medal";
+  const GAME_VERSION = window.location.href.includes("/popn/popn29")
+    ? "popn29"
+    : "jamfizz";
+  const PLAY_DATA_URL = `https://p.eagate.573.jp/game/popn/${GAME_VERSION}/playdata`;
+  const MEDAL_IMAGE_URL = `https://eacache.s.konaminet.jp/game/popn/${GAME_VERSION}/images/p/common/medal`;
 
   function resToText(res) {
     return res.arrayBuffer().then((buffer) => {
@@ -45,18 +47,38 @@ async function wapper() {
     return fetch(url)
       .then(resToText)
       .then((text) => domparser.parseFromString(text, "text/html"))
-      .then((doc) => doc.querySelectorAll("ul.mu_list_table > li"))
+      .then((doc) => {
+        const selector = GAME_VERSION === "popn29"
+          ? "ul.mu_list_lv_table > li"
+          : "ul.mu_list_table > li";
+        return doc.querySelectorAll(selector);
+      })
       .then((lis) => {
         return Array.from(lis)
-          .filter((li) => li.firstElementChild.className.startsWith("col"))
-          .map((li) => [
-            li.children[3].textContent,
-            li.children[3].firstChild.src
-              .replace(`${MEDAL_IMAGE_URL}/meda_`, "")
-              .replace(".png", ""),
-            li.firstElementChild.childNodes[3].textContent,
-            li.firstElementChild.firstElementChild.textContent,
-          ])
+          .filter((li) =>
+            GAME_VERSION === "popn29"
+              ? !li.classList.contains("st_th")
+              : li.firstElementChild.className.startsWith("col")
+          )
+          .map((li) =>
+            GAME_VERSION === "popn29"
+              ? [
+                  li.children[3].querySelector("p").textContent,
+                  li.children[3].querySelector("img").src
+                    .replace(`${MEDAL_IMAGE_URL}/meda_`, "")
+                    .replace(".png", ""),
+                  li.children[0].querySelector("p").textContent,
+                  li.children[0].querySelector("a").textContent,
+                ]
+              : [
+                  li.children[3].textContent,
+                  li.children[3].firstChild.src
+                    .replace(`${MEDAL_IMAGE_URL}/meda_`, "")
+                    .replace(".png", ""),
+                  li.firstElementChild.childNodes[3].textContent,
+                  li.firstElementChild.firstElementChild.textContent,
+                ]
+          )
           .map(([score, medal, genre, song]) => {
             let point =
               score < 50000
@@ -98,18 +120,24 @@ async function wapper() {
     [7, 48],
     [8, 48],
     [9, 48],
-  ].map(([page, level]) =>
-    whatever(`${PLAY_DATA_URL}/mu_lv.html?page=${page}&lv=${level}`, level)
-  );
+  ].map(([page, level]) => {
+    const query = GAME_VERSION === "popn29"
+      ? `page=${page}&version=-1&bemani=0&category=0&keyword=&lv=${level}&sort=none&sort_type=none`
+      : `page=${page}&lv=${level}`;
+    return whatever(`${PLAY_DATA_URL}/mu_lv.html?${query}`, level);
+  });
 
   const player = await fetch(`${PLAY_DATA_URL}/index.html`)
     .then(resToText)
     .then((text) => domparser.parseFromString(text, "text/html"))
-    .then(
-      (doc) =>
-        doc.querySelector("#status_table > div.st_box > div:nth-child(2)")
-          .textContent
-    );
+    .then((doc) => {
+      const selector = GAME_VERSION === "popn29"
+        ? "#status_table .st_box ul li:first-child div"
+        : "#status_table > div.st_box > div:nth-child(2)";
+      const el = doc.querySelector(selector);
+      if (!el) throw new Error("プレーヤー名の取得に失敗しました。");
+      return el.textContent;
+    });
 
   const first50Points = (await Promise.all(promises))
     .flat()
@@ -129,6 +157,8 @@ async function wapper() {
     justify-content: center;
   }
   .pokuraTable {
+    width: auto;
+    margin: 0;
     background-color: #feffb7;
     border-collapse: collapse;
   }
@@ -147,7 +177,15 @@ async function wapper() {
   .pokuraTable td img {
     vertical-align: middle;
   }
+  .pokuraTable th:nth-child(2),.pokuraTable td:nth-child(2),
+  .pokuraTable th:nth-child(3),.pokuraTable td:nth-child(3) {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .profileTable {
+    width: auto;
     margin: 10px auto;
     font-size: 14px;
   }
