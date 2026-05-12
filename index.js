@@ -24,6 +24,7 @@ async function wapper() {
     i: 0,
     j: 0,
     k: 3000,
+    l: 3000,
     none: 0,
   };
 
