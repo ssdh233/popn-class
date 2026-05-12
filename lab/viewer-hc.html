@@ -12,9 +12,10 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZudWphem5ybGVycXB5aHdoaXJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDI1NzgsImV4cCI6MjA5NDAxODU3OH0.GRccND27_3NCgABj6JULYDzWQfhXafkAL17Ws6BIZQQ";
   const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/popn29/images/p/common/medal";
 
+  const A = 21158, B = 17420, C = 12415;
   const MEDAL_BONUS = {
-    a: 21400, b: 17400, c: 17400, d: 17400,
-    e: 12400, f: 12400, g: 12400,
+    a: A, b: B, c: B, d: B,
+    e: C, f: C, g: C,
     h: 0, i: 0, j: 0,
     k: 6200, l: 9300, none: 0,
   };
@@ -25,7 +26,7 @@
   function calcPoint(scoreText, level, medal) {
     const s = parseInt(scoreText);
     if (isNaN(s) || s < 50000) return 0;
-    return floor(round((level * (3750 * level + (MEDAL_BONUS[medal] ?? 0) + (s - 50000))) / 3880000, 8), 3);
+    return floor((level * (3750 * level + (MEDAL_BONUS[medal] ?? 0) + (s - 50000))) / 3880000, 8);
   }
 
   function applyToggleToOldSongs(songs, useEC) {
@@ -43,15 +44,20 @@
     });
   }
 
-  function computeTop40Old(songs, useEC) {
-    return [...applyToggleToOldSongs(songs, useEC)].sort((a, b) => b.point - a.point).slice(0, 40);
-  }
-
   function computeAllOldSorted(songs, useEC) {
     return [...applyToggleToOldSongs(songs, useEC)].sort((a, b) => b.point - a.point);
   }
 
-  const id = new URLSearchParams(location.search).get("id");
+  function buildSongMap(songs) {
+    const map = new Map();
+    for (const s of songs ?? []) map.set(`${s.song}|${s.level}`, s);
+    return map;
+  }
+
+  const params = new URLSearchParams(location.search);
+  const id = params.get("id");
+  const compareId = params.get("compare");
+
   document.body.innerHTML = '<div style="padding:40px;text-align:center;font-size:14px;color:#555;">データ取得中...</div>';
 
   if (!id) {
@@ -59,12 +65,15 @@
     return;
   }
 
-  const res = await fetch(`${SUPABASE_URL}pokkura_records?id=eq.${encodeURIComponent(id)}&select=*`, {
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-  });
+  const headers = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` };
+
+  const [res, listRes, cmpRes] = await Promise.all([
+    fetch(`${SUPABASE_URL}pokkura_records?id=eq.${encodeURIComponent(id)}&select=*`, { headers }),
+    fetch(`${SUPABASE_URL}pokkura_records?select=id,player_name,created_at&order=created_at.desc`, { headers }),
+    compareId
+      ? fetch(`${SUPABASE_URL}pokkura_records?id=eq.${encodeURIComponent(compareId)}&select=*`, { headers })
+      : Promise.resolve(null),
+  ]);
 
   const records = await res.json();
   console.log("Supabase response:", res.status, records);
@@ -75,7 +84,16 @@
     return;
   }
 
-  const top20New = record.top20_new;
+  document.title = `ポックラ ${record.player_name}`;
+
+  const listData = await listRes.json();
+  let compareRecord = null;
+  if (cmpRes) {
+    const cmpRecords = await cmpRes.json();
+    compareRecord = cmpRecords[0] ?? null;
+  }
+
+  const top20New = record.top20_new.map((s) => ({ ...s, point: calcPoint(s.score, s.level, s.medal) }));
   const oldResolved = record.top40_old;
   let useEC = false;
   let useAssumeEC = false;
@@ -89,19 +107,42 @@
     });
   }
 
+  // Compare control (persists across rerenders)
+  const compareEl = document.createElement("div");
+  compareEl.id = "compareControl";
+  compareEl.style.cssText = "text-align:center;padding:6px 16px;font-size:12px;font-family:sans-serif;background:#f8f8f8;border-bottom:1px solid #ddd;";
+  compareEl.innerHTML = `比較: <select id="compareSelect" style="font-size:12px;">
+    <option value="">比較なし</option>
+    ${listData.filter(r => r.id !== id).map(r =>
+      `<option value="${r.id}" ${r.id === compareId ? "selected" : ""}>${r.player_name} (${new Date(r.created_at).toLocaleDateString("ja-JP")})</option>`
+    ).join("")}
+  </select>`;
+
   const divEl = document.createElement("div");
   divEl.id = "pokkura";
   document.body.innerHTML = "";
+  document.body.appendChild(compareEl);
   document.body.appendChild(divEl);
+
+  document.getElementById("compareSelect").addEventListener("change", function () {
+    const url = new URL(location.href);
+    if (this.value) url.searchParams.set("compare", this.value);
+    else url.searchParams.delete("compare");
+    location.href = url.toString();
+  });
 
   function rerender() {
     let allOldSorted = computeAllOldSorted(oldResolved, useEC);
     if (useAssumeEC) allOldSorted = applyAssumeEC(allOldSorted).sort((a, b) => b.point - a.point);
     const effectiveNew = useAssumeEC ? applyAssumeEC(top20New).sort((a, b) => b.point - a.point) : top20New;
-    renderResult(allOldSorted, effectiveNew);
+
+    const cmpNewMap = compareRecord ? buildSongMap(compareRecord.top20_new) : null;
+    const cmpOldMap = compareRecord ? buildSongMap(compareRecord.top40_old) : null;
+
+    renderResult(allOldSorted, effectiveNew, cmpNewMap, cmpOldMap);
   }
 
-  function renderResult(allOldSorted, effectiveNew) {
+  function renderResult(allOldSorted, effectiveNew, cmpNewMap, cmpOldMap) {
     const top40Old = allOldSorted.slice(0, 40);
     const classPointRaw = round([...effectiveNew, ...top40Old].reduce((acc, cur) => acc + cur.point, 0), 8);
 
@@ -114,10 +155,40 @@
     const rePointNoEC = round([...reEffectiveNew, ...reTop40Old(false)].reduce((acc, cur) => acc + cur.point, 0), 8);
     const rePointWithEC = round([...reEffectiveNew, ...reTop40Old(true)].reduce((acc, cur) => acc + cur.point, 0), 8);
 
-    const renderRows = (songs) =>
-      songs.map((x, i) =>
-        `<tr><td>${i + 1}</td><td>${x.level}</td><td class="col-genre">${x.genre}</td><td class="col-song">${x.song}</td><td>${x.score}</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal}.png"></td><td>${x.point.toFixed(3)}</td></tr>`
-      ).join("");
+    const renderRows = (songs, cmpMap) => {
+      const aKeys = new Set(songs.map(s => `${s.song}|${s.level}`));
+
+      const mainRows = songs.map((x, i) => {
+        const key = `${x.song}|${x.level}`;
+        let cmpCell = "";
+        if (cmpMap) {
+          const cmp = cmpMap.get(key);
+          if (!cmp) {
+            cmpCell = `<td><span class="badge-new">NEW</span></td>`;
+          } else if (cmp.score !== x.score || cmp.medal !== x.medal) {
+            const medalChanged = cmp.medal !== x.medal
+              ? `<img src="${MEDAL_IMAGE_URL}/meda_${cmp.medal}.png" style="vertical-align:middle;opacity:0.7"> `
+              : "";
+            cmpCell = `<td><span class="badge-updated">${medalChanged}${cmp.score}</span></td>`;
+          } else {
+            cmpCell = `<td></td>`;
+          }
+        }
+        return `<tr><td>${i + 1}</td><td>${x.level}</td><td class="col-genre">${x.genre}</td><td class="col-song">${x.song}</td><td>${x.score}</td><td><img src="${MEDAL_IMAGE_URL}/meda_${x.medal}.png"></td><td>${x.point.toFixed(3)}</td>${cmpCell}</tr>`;
+      });
+
+      const removedRows = [];
+      if (cmpMap) {
+        for (const [key, cmpSong] of cmpMap) {
+          if (!aKeys.has(key)) {
+            const p = calcPoint(cmpSong.score, cmpSong.level, cmpSong.medal);
+            removedRows.push(`<tr class="row-removed"><td>-</td><td>${cmpSong.level}</td><td class="col-genre">${cmpSong.genre}</td><td class="col-song">${cmpSong.song}</td><td>${cmpSong.score}</td><td><img src="${MEDAL_IMAGE_URL}/meda_${cmpSong.medal}.png"></td><td>${p.toFixed(3)}</td><td></td></tr>`);
+          }
+        }
+      }
+
+      return [...mainRows, ...removedRows].join("");
+    };
 
     const createdAt = new Date(record.created_at).toLocaleString("ja-JP");
 
@@ -157,6 +228,9 @@
 .toggleWrapper { margin: 4px 0 6px; text-align: center; }
 .toggleLabel { cursor: pointer; font-size: 12px; color: #555; user-select: none; }
 .footnote { font-size: 10px; margin: 8px auto; color: gray; text-align: center; }
+.badge-new { background: #22c55e; color: white; font-size: 10px; padding: 1px 4px; border-radius: 3px; white-space: nowrap; }
+.badge-updated { background: #3b82f6; color: white; font-size: 10px; padding: 1px 4px; border-radius: 3px; white-space: nowrap; }
+.row-removed td { background-color: #d1d5db !important; color: #6b7280; }
 @media (max-width: 768px) {
   .pokura { flex-direction: column; }
   .pokuraTable th:first-child, td:first-child { min-width: 20px; }
@@ -167,7 +241,7 @@
 </style>
 <table class="pokuraTable profileTable">
   <tr><td>プレーヤー名</td><td>${record.player_name}</td></tr>
-  <tr><td>ポックラ（計算値）</td><td>${floor(classPointRaw, 2).toFixed(2)}</td></tr>
+  <tr><td>ポックラ（計算値）</td><td>${record.pokkura ?? "-"}</td></tr>
   <tr><td>ポックラ（計算値+EASY）</td><td>${record.pokkura2 ?? "-"}</td></tr>
   <tr><td>re ポックラ（計算値）</td><td>${floor(rePointNoEC, 4).toFixed(4)}</td></tr>
   <tr><td>re ポックラ（計算値+EASY）</td><td>${floor(rePointWithEC, 4).toFixed(4)}</td></tr>
@@ -179,15 +253,15 @@
 <div class="sectionLabel">新曲</div>
 <div class="pokura">
   <table class="pokuraTable">
-    <tr><th style="width:24px">#</th><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
-    ${renderRows(effectiveNew)}
+    <tr><th style="width:24px">#</th><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th>${cmpNewMap ? '<th style="width:65px">旧スコア</th>' : ""}</tr>
+    ${renderRows(effectiveNew, cmpNewMap)}
   </table>
 </div>
 <div class="sectionLabel">旧曲</div>
 <div class="pokura">
   <table class="pokuraTable">
-    <tr><th style="width:24px">#</th><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
-    ${renderRows(allOldSorted)}
+    <tr><th style="width:24px">#</th><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th>${cmpOldMap ? '<th style="width:65px">旧スコア</th>' : ""}</tr>
+    ${renderRows(allOldSorted, cmpOldMap)}
   </table>
 </div>
 <div class="toggleWrapper">

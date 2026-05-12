@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ポックラ一覧</title>
+  <style>
+    body { font-family: sans-serif; padding: 16px; }
+    h1 { font-size: 18px; color: #d82f66; }
+    #status { color: #555; font-size: 13px; margin-bottom: 10px; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    th { background: #d82f66; color: white; padding: 6px 10px; text-align: center; white-space: nowrap; }
+    td { padding: 5px 10px; text-align: center; border-bottom: 1px solid #eee; }
+    tr:hover td { background: #fff9e6; }
+    .missing { color: #aaa; }
+  </style>
+</head>
+<body>
+<h1>ポックラ一覧</h1>
+<div id="status">データ取得中...</div>
+<table id="table">
+  <thead>
+    <tr>
+      <th>プレーヤー名</th>
+      <th>ポックラ（実際）</th>
+      <th>ポックラ（計算）</th>
+      <th>差分</th>
+      <th>パフェ</th>
+      <th>フルコン</th>
+      <th>クリア</th>
+      <th>旧曲取得件数</th>
+    </tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<script>
+(async function () {
+  const SUPABASE_URL = "https://fnujaznrlerqpyhwhiry.supabase.co/rest/v1/";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZudWphem5ybGVycXB5aHdoaXJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDI1NzgsImV4cCI6MjA5NDAxODU3OH0.GRccND27_3NCgABj6JULYDzWQfhXafkAL17Ws6BIZQQ";
+
+  const A = 21158, B = 17420, C = 12415;
+  const MEDAL_BONUS = {
+    a: A, b: B, c: B, d: B,
+    e: C, f: C, g: C,
+    h: 0, i: 0, j: 0,
+    k: 6200, l: 9300, none: 0,
+  };
+  const round = (n, p) => Math.round(n * 10 ** p) / 10 ** p;
+  const floor = (n, p) => Math.floor(n * 10 ** p) / 10 ** p;
+
+  function calcPoint(scoreText, level, medal) {
+    const s = parseInt(scoreText);
+    if (isNaN(s) || s < 50000) return 0;
+    return floor((level * (3750 * level + (MEDAL_BONUS[medal] ?? 0) + (s - 50000))) / 3880000, 8);
+  }
+
+  function effectiveMedalForOld(song) {
+    const hm = song.historicalMedal ?? song.medal;
+    const vm = song.versionMedal ?? song.medal;
+    return (MEDAL_BONUS[vm] ?? 0) === (MEDAL_BONUS[hm] ?? 0) ? hm : vm;
+  }
+
+  function countMedals(record) {
+    const allSongs = [...(record.top20_new ?? []), ...(record.top40_old ?? [])];
+    let perf = 0, fc = 0, clear = 0;
+    for (const s of allSongs) {
+      const m = s.medal;
+      if (m === 'a') perf++;
+      else if (m === 'b' || m === 'c' || m === 'd') fc++;
+      else if (m === 'e' || m === 'f' || m === 'g' || m === 'h' || m === 'i' || m === 'j' || m === 'k' || m === 'l') clear++;
+    }
+    return { perf, fc, clear };
+  }
+
+  function calcPokkura(record) {
+    const newPoints = (record.top20_new ?? [])
+      .map((s) => calcPoint(s.score, s.level, s.medal))
+      .reduce((a, b) => a + b, 0);
+    const oldPoints = (record.top40_old ?? [])
+      .map((s) => calcPoint(s.score, s.level, effectiveMedalForOld(s)))
+      .sort((a, b) => b - a)
+      .slice(0, 40)
+      .reduce((a, b) => a + b, 0);
+    return floor(round(newPoints + oldPoints, 8), 2);
+  }
+
+  const res = await fetch(
+    `${SUPABASE_URL}pokkura_records?select=id,player_name,real_pokkura,old_songs_fetched,top20_new,top40_old`,
+    {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+    }
+  );
+
+  if (!res.ok) {
+    document.getElementById("status").textContent = `エラー: ${res.status}`;
+    return;
+  }
+
+  // allData includes top20_new / top40_old for later use
+  window.allData = await res.json();
+  document.getElementById("status").textContent = `${window.allData.length} 件取得`;
+
+  function renderTable() {
+    const sorted = [...window.allData].sort((a, b) => {
+      const av = a.real_pokkura ?? -Infinity;
+      const bv = b.real_pokkura ?? -Infinity;
+      return bv - av;
+    });
+
+    document.getElementById("tbody").innerHTML = sorted.map((r) => `
+      <tr>
+        <td><a href="viewer-hc.html?id=${r.id}">${r.player_name ?? ""}</a></td>
+        <td>${r.real_pokkura != null ? r.real_pokkura : '<span class="missing">-</span>'}</td>
+        <td>${calcPokkura(r).toFixed(2)}</td>
+        <td>${r.real_pokkura != null ? (calcPokkura(r) - r.real_pokkura).toFixed(2) : '<span class="missing">-</span>'}</td>
+        ${(() => { const m = countMedals(r); return `<td>${m.perf}</td><td>${m.fc}</td><td>${m.clear}</td>`; })()}
+        <td>${r.old_songs_fetched != null ? r.old_songs_fetched : '<span class="missing">-</span>'}</td>
+      </tr>
+    `).join("");
+  }
+
+  renderTable();
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.3.1";
+  const VERSION = "v2.4.0";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -14,13 +14,13 @@ async function wapper() {
   const floor = (number, p) => Math.floor(number * 10 ** p) / 10 ** p;
 
   const MEDAL_BONUS = {
-    a: 21400, // PERFECT
-    b: 17400, // Full Combo
-    c: 17400, // Full Combo
-    d: 17400, // Full Combo
-    e: 12400, // CLEAR
-    f: 12400, // CLEAR
-    g: 12400, // CLEAR
+    a: 21158, // PERFECT
+    b: 17420, // Full Combo
+    c: 17420, // Full Combo
+    d: 17420, // Full Combo
+    e: 12415, // CLEAR
+    f: 12415, // CLEAR
+    g: 12415, // CLEAR
     h: 0,     // 未クリア
     i: 0,     // 未クリア
     j: 0,     // 未クリア
@@ -47,8 +47,8 @@ async function wapper() {
     const s = parseInt(scoreText);
     if (isNaN(s) || s < 50000) return 0;
     return floor(
-      round((level * (3750 * level + (MEDAL_BONUS[medal] ?? 0) + (s - 50000))) / 3880000, 8),
-      3
+      (level * (3750 * level + (MEDAL_BONUS[medal] ?? 0) + (s - 50000))) / 3880000,
+      8
     );
   }
 
@@ -412,9 +412,10 @@ async function wapper() {
   </div>
   <div class="toggleWrapper">
     <label class="toggleLabel">
-      <input type="checkbox" id="toggleEC" ${useHistoricalEC ? "checked" : ""}> EASY CLEARは歴代メダルに参照
+      <input type="checkbox" id="toggleEC" ${useHistoricalEC ? "checked" : ""}> EASYクリアの歴代メダルを参照する
     </label>
   </div>
+  <div class="footnote">※ 表示されるポックラ値はスクリプトによる推定値です。実際のゲーム内ポックラと異なる場合があります。</div>
   <div class="footnote">ポックラスクリプト${VERSION}</div>
   `;
 
