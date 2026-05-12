@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.2.0";
+  const VERSION = "v1.2.1";
   console.log("Running popn class script", VERSION);
 
   const round = (number, p) => {
