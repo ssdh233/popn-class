@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.4.0";
+  const VERSION = "v2.5.0";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -285,7 +285,7 @@ async function wapper() {
       songs
         .map(
           (x) =>
-            `<tr><td>${x.level}</td><td class="col-genre">${x.genre}</td><td class="col-song">${x.song}</td><td>${
+            `<tr><td>${x.level}</td><td class="col-song"><div class="col-genre-text">${x.genre}</div><div class="col-song-text">${x.song}</div></td><td>${
               x.score
             }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
               x.medal
@@ -309,7 +309,7 @@ async function wapper() {
     background-color: #feffb7;
     border-collapse: collapse;
     font-size: 13px;
-    width: 100%;
+    width: auto;
     table-layout: fixed;
     max-width: 600px;
   }
@@ -322,18 +322,29 @@ async function wapper() {
     text-align: center;
   }
   .pokuraTable td {
-    padding: 3px 8px;
+    padding: 1px 6px;
     text-align: center;
   }
   .pokuraTable td img {
     vertical-align: middle;
   }
-  .col-genre {
+  .col-song {
+    overflow: hidden;
+    text-align: left;
+    width: 200px;
+    max-width: 200px;
+  }
+  .col-genre-text {
+    font-size: 9px;
+    line-height: 1.2;
+    color: #888;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .col-song {
+  .col-song-text {
+    font-size: 11px;
+    line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -379,13 +390,13 @@ async function wapper() {
     .pokuraTable th:first-child,td:first-child {
       min-width: 20px;
     }
+    .pokuraTable th:nth-child(3),td:nth-child(3) {
+      min-width: 40px;
+    }
     .pokuraTable th:nth-child(4),td:nth-child(4) {
       min-width: 40px;
     }
     .pokuraTable th:nth-child(5),td:nth-child(5) {
-      min-width: 40px;
-    }
-    .pokuraTable th:nth-child(6),td:nth-child(6) {
       min-width: 50px;
     }
   }
@@ -399,14 +410,14 @@ async function wapper() {
   <div class="sectionLabel">新曲</div>
   <div class="pokura">
     <table class="pokuraTable">
-      <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
+      <tr><th style="width:34px">LV</th><th style="width:200px">曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
       ${renderRows(top20New)}
     </table>
   </div>
   <div class="sectionLabel">旧曲</div>
   <div class="pokura">
     <table class="pokuraTable">
-      <tr><th style="width:34px">LV</th><th>ジャンル</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
+      <tr><th style="width:34px">LV</th><th style="width:200px">曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
       ${renderRows(currentTop40Old)}
     </table>
   </div>

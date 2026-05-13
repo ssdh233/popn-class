@@ -27,6 +27,8 @@ const STRATEGIES = {
   'round8': (n) => Math.round(n * 1e8) / 1e8,
   'floor3': (n) => Math.floor(n * 1e3) / 1e3,
   'round3': (n) => Math.round(n * 1e3) / 1e3,
+  'floor2': (n) => Math.floor(n * 1e2) / 1e2,
+  'round2': (n) => Math.round(n * 1e2) / 1e2,
 };
 
 function calcPoint(score, level, medal, bonus, alpha, denom, applyFn) {
