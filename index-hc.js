@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.5.1";
+  const VERSION = "v2.5.2";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -14,18 +14,18 @@ async function wapper() {
   const floor = (number, p) => Math.floor(number * 10 ** p) / 10 ** p;
 
   const MEDAL_BONUS = {
-    a: 21158, // PERFECT
-    b: 17420, // Full Combo
-    c: 17420, // Full Combo
-    d: 17420, // Full Combo
-    e: 12415, // CLEAR
-    f: 12415, // CLEAR
-    g: 12415, // CLEAR
+    a: 21250, // PERFECT
+    b: 17500, // Full Combo
+    c: 17500, // Full Combo
+    d: 17500, // Full Combo
+    e: 12500, // CLEAR
+    f: 12500, // CLEAR
+    g: 12500, // CLEAR
     h: 0,     // 未クリア
     i: 0,     // 未クリア
     j: 0,     // 未クリア
-    k: 6200,  // EASYクリア
-    l: 9300,  // アシストクリア
+    k: 10000,  // EASYクリア
+    l: 6250,  // アシストクリア
     none: 0,  // 未クリア
   };
 
@@ -46,12 +46,9 @@ async function wapper() {
   function calcPoint(scoreText, level, medal) {
     const s = parseInt(scoreText);
     if (isNaN(s) || s < 50000) return 0;
-    return floor(
-      (level * (3750 * level + (MEDAL_BONUS[medal] ?? 0) + (s - 50000))) / 3880000,
-      8
-    );
+    return floor(floor((level * (3750 * level + (MEDAL_BONUS[medal] ?? 0) + (s - 50000))) / 3881250, 8) * 60, 2);
   }
-
+  
   let requestCount = 0;
 
   function fetchAndParse(url, parser) {
@@ -276,9 +273,9 @@ async function wapper() {
   document.body.appendChild(divEl);
 
   function renderResult(currentTop40Old) {
-    const classPointRaw = round(
-      [...top20New, ...currentTop40Old].reduce((acc, cur) => acc + cur.point, 0),
-      8
+    const classPointRaw = floor(
+      round([...top20New, ...currentTop40Old].reduce((acc, cur) => acc + cur.point, 0), 8) / 60,
+      2
     );
 
     const renderRows = (songs) =>
@@ -289,7 +286,7 @@ async function wapper() {
               x.score
             }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
               x.medal
-            }.png"></td><td>${x.point.toFixed(3)}</td></tr>`
+            }.png"></td><td>${floor(x.point / 60, 3).toFixed(3)}</td></tr>`
         )
         .join("");
 
@@ -401,9 +398,9 @@ async function wapper() {
   </style>
   <table class="pokuraTable profileTable">
     <tr><td>プレーヤー名</td><td>${player}</td></tr>
-    <tr><td>ポックラ</td><td>${floor(classPointRaw, 2).toFixed(2)}</td></tr>
-    <tr><td>新曲</td><td>${floor(round(top20New.reduce((acc, cur) => acc + cur.point, 0), 8), 2).toFixed(2)}</td></tr>
-    <tr><td>旧曲</td><td>${floor(round(currentTop40Old.reduce((acc, cur) => acc + cur.point, 0), 8), 2).toFixed(2)}</td></tr>
+    <tr><td>ポックラ</td><td>${classPointRaw.toFixed(2)}</td></tr>
+    <tr><td>新曲</td><td>${floor(round(top20New.reduce((acc, cur) => acc + cur.point, 0), 8) / 60, 2).toFixed(2)}</td></tr>
+    <tr><td>旧曲</td><td>${floor(round(currentTop40Old.reduce((acc, cur) => acc + cur.point, 0), 8) / 60, 2).toFixed(2)}</td></tr>
   </table>
   <div class="sectionLabel">新曲</div>
   <div class="pokura">
