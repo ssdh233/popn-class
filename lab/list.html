@@ -21,6 +21,7 @@
 <table id="table">
   <thead>
     <tr>
+      <th>No.</th>
       <th>プレーヤー名</th>
       <th>ポックラ（実際）</th>
       <th>ポックラ（計算）</th>
@@ -29,6 +30,7 @@
       <th>フルコン</th>
       <th>クリア</th>
       <th>旧曲取得件数</th>
+      <th>スクリプトver</th>
     </tr>
   </thead>
   <tbody id="tbody"></tbody>
@@ -86,7 +88,7 @@
   }
 
   const res = await fetch(
-    `${SUPABASE_URL}pokkura_records?select=id,player_name,real_pokkura,old_songs_fetched,top20_new,top40_old`,
+    `${SUPABASE_URL}pokkura_records?select=id,player_name,real_pokkura,old_songs_fetched,top20_new,top40_old,script_version`,
     {
       headers: {
         apikey: SUPABASE_ANON_KEY,
@@ -111,14 +113,24 @@
       return bv - av;
     });
 
-    document.getElementById("tbody").innerHTML = sorted.map((r) => `
+    const seen = new Set();
+    const deduped = sorted.filter((r) => {
+      const key = r.player_name ?? "";
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    document.getElementById("tbody").innerHTML = deduped.map((r, i) => `
       <tr>
+        <td>${i + 1}</td>
         <td><a href="viewer-hc.html?id=${r.id}">${r.player_name ?? ""}</a></td>
         <td>${r.real_pokkura != null ? r.real_pokkura : '<span class="missing">-</span>'}</td>
         <td>${calcPokkura(r).toFixed(2)}</td>
         <td>${r.real_pokkura != null ? (calcPokkura(r) - r.real_pokkura).toFixed(2) : '<span class="missing">-</span>'}</td>
         ${(() => { const m = countMedals(r); return `<td>${m.perf}</td><td>${m.fc}</td><td>${m.clear}</td>`; })()}
         <td>${r.old_songs_fetched != null ? r.old_songs_fetched : '<span class="missing">-</span>'}</td>
+        <td>${r.script_version != null ? r.script_version : '<span class="missing">-</span>'}</td>
       </tr>
     `).join("");
   }
