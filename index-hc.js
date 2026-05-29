@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.5.3";
+  const VERSION = "v2.5.4";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -93,15 +93,6 @@ async function wapper() {
     return results;
   }
 
-  // localStorage cache: { [no]: { score, medal } } — 歴代=VERSIONが確認済みの曲
-  // score をキーとして保持することで、歴代スコアが更新されたら自動的に無効化される
-  const CACHE_KEY = "popn_hc_version_cache_v2";
-  const versionCache = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
-
-  function saveCache() {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(versionCache));
-  }
-
   const TOGGLE_KEY = "popn_hc_use_historical_easy_clear";
   let useHistoricalEC = localStorage.getItem(TOGGLE_KEY) === "true";
 
@@ -125,6 +116,7 @@ async function wapper() {
     const clearCount   = parseInt(playRows[1]?.textContent) || 0; // クリア回数
     const fcCount      = parseInt(playRows[2]?.textContent) || 0; // FULL COMBO回数
     const perfectCount = parseInt(playRows[3]?.textContent) || 0; // PERFECT回数
+    const title = doc.querySelector("#title")?.textContent.trim();
 
     let medal;
     if (perfectCount > 0) medal = "a";
@@ -136,30 +128,12 @@ async function wapper() {
   }
 
   async function fetchVersionScore(song) {
-    const cached = versionCache[song.no];
-    if (cached && cached.score === song.score) {
-      const vm = cached.medal;
-      const hm = song.medal;
-      // VERSIONメダルのボーナスが歴代と同じ場合のみ歴代メダルを採用
-      const effectiveMedal = (MEDAL_BONUS[vm] ?? 0) === (MEDAL_BONUS[hm] ?? 0) ? hm : vm;
-      const point = calcPoint(song.score, song.level, effectiveMedal);
-      return { ...song, historicalMedal: hm, versionMedal: vm, medal: effectiveMedal, point };
-    }
-
     const url = `${PLAY_DATA_URL}/mu_detail.html?no=${encodeURIComponent(song.no)}&back=index`;
     const result = await fetchAndParse(url, parseDetailPage);
     if (!result) return { ...song, historicalMedal: song.medal, versionMedal: song.medal };
 
     const hm = song.medal;
     const vm = result.medal;
-
-    if (result.score === song.score &&
-        (MEDAL_BONUS[vm] ?? 0) >= (MEDAL_BONUS[hm] ?? 0)) {
-      versionCache[song.no] = { score: song.score, medal: vm };
-      saveCache();
-    }
-
-    // VERSIONメダルのボーナスが歴代と同じ場合のみ歴代メダルを採用
     const effectiveMedal = (MEDAL_BONUS[vm] ?? 0) === (MEDAL_BONUS[hm] ?? 0) ? hm : vm;
     const point = calcPoint(result.score, song.level, effectiveMedal);
     return { ...song, score: result.score, historicalMedal: hm, versionMedal: vm, medal: effectiveMedal, point };
@@ -190,7 +164,6 @@ async function wapper() {
 
   const top20New = [...newSongs].sort((a, b) => b.point - a.point).slice(0, 20);
 
-  // 上位120候補を10件ずつ取得し、現在の40位が次の候補の歴代ポックラを超えたら早期終了
   const oldCandidates = [...oldSongs].sort((a, b) => b.point - a.point).slice(0, 120);
   const oldResolved = [];
   let oldCutoffPoint = null;
