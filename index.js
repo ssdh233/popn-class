@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.3.0";
+  const VERSION = "v1.3.1";
   console.log("Running popn class script", VERSION);
 
   const round = (number, p) => {
@@ -154,6 +154,7 @@ async function wapper() {
   divEl.innerHTML = `
   <style scoped>
   #pokkura {
+    padding: 16px;
     display: flex;
     flex-direction: column;
     align-items: center;
