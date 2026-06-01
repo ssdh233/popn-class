@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.2.1";
+  const VERSION = "v1.3.0";
   console.log("Running popn class script", VERSION);
 
   const round = (number, p) => {
@@ -153,15 +153,20 @@ async function wapper() {
   divEl.id = "pokkura";
   divEl.innerHTML = `
   <style scoped>
+  #pokkura {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
   .pokura {
     display: flex;
     justify-content: center;
   }
   .pokuraTable {
-    width: auto;
-    margin: 0;
     background-color: #feffb7;
     border-collapse: collapse;
+    font-size: 13px;
+    table-layout: fixed;
   }
   .pokuraTable:first-child {
     margin-right: 10px;
@@ -170,31 +175,47 @@ async function wapper() {
     border-bottom: 2px solid #d82f66;
   }
   .pokuraTable th {
-    padding: 4px;
+    padding: 4px 8px;
+    white-space: nowrap;
+    text-align: center;
   }
   .pokuraTable td {
-    padding: 0 4px;
+    padding: 1px 6px;
+    text-align: center;
   }
   .pokuraTable td img {
     vertical-align: middle;
   }
-  .pokuraTable th:nth-child(2),.pokuraTable td:nth-child(2),
-  .pokuraTable th:nth-child(3),.pokuraTable td:nth-child(3) {
+  .col-song {
     max-width: 180px;
+    overflow: hidden;
+    text-align: left;
+  }
+  .col-genre-text {
+    font-size: 9px;
+    line-height: 1.2;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .col-song-text {
+    font-size: 11px;
+    line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .profileTable {
     width: auto;
-    margin: 10px auto;
-    font-size: 14px;
+    font-size: 13px;
   }
   .profileTable td {
-    padding: 5px;
+    padding: 3px 8px;
   }
   .profileTable td:first-child {
     font-weight: bold;
+    white-space: nowrap;
   }
   .footnote {
     font-size: 10px;
@@ -208,6 +229,7 @@ async function wapper() {
     }
     .pokuraTable {
       width: 100%;
+      max-width: 400px;
       margin-bottom: 20px;
     }
     .profileTable {
@@ -216,13 +238,13 @@ async function wapper() {
     .pokuraTable th:first-child,td:first-child {
       min-width: 20px;
     }
+    .pokuraTable th:nth-child(3),td:nth-child(3) {
+      min-width: 40px;
+    }
     .pokuraTable th:nth-child(4),td:nth-child(4) {
       min-width: 40px;
     }
     .pokuraTable th:nth-child(5),td:nth-child(5) {
-      min-width: 40px;
-    }
-    .pokuraTable th:nth-child(6),td:nth-child(6) {
       min-width: 50px;
     }
   }
@@ -235,12 +257,12 @@ async function wapper() {
   )}</td></tr></table>
   <div class="pokura">
   <table class="pokuraTable">
-    <tr><th>LV</th><th>ジャンル</th><th>曲名</th><th>スコア</th><th>メダル</th><th>ポックラ</th></tr>
+    <tr><th style="width:34px">LV</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
     ${first50Points
       .slice(0, 25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
+          `<tr><td>${x.level}</td><td class="col-song"><div class="col-genre-text">${x.genre}</div><div class="col-song-text">${x.song}</div></td><td>${
             x.score
           }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
             x.medal
@@ -249,12 +271,12 @@ async function wapper() {
       .join("")}
   </table>
   <table class="pokuraTable">
-    <tr><th>LV</th><th>ジャンル</th><th>曲名</th><th>スコア</th><th>メダル</th><th>ポックラ</th></tr>
+    <tr><th style="width:34px">LV</th><th>曲名</th><th style="width:65px">スコア</th><th style="width:45px">メダル</th><th style="width:62px">ポックラ</th></tr>
     ${first50Points
       .slice(25)
       .map(
         (x) =>
-          `<tr><td>${x.level}</td><td>${x.genre}</td><td>${x.song}</td><td>${
+          `<tr><td>${x.level}</td><td class="col-song"><div class="col-genre-text">${x.genre}</div><div class="col-song-text">${x.song}</div></td><td>${
             x.score
           }</td><td><img src="${MEDAL_IMAGE_URL}/meda_${
             x.medal
