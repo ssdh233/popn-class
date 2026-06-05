@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v1.3.1";
+  const VERSION = "v1.3.2";
   console.log("Running popn class script", VERSION);
 
   const round = (number, p) => {
@@ -168,6 +168,8 @@ async function wapper() {
     border-collapse: collapse;
     font-size: 13px;
     table-layout: fixed;
+    max-width: 400px;
+    margin-bottom: 20px;
   }
   .pokuraTable:first-child {
     margin-right: 10px;
