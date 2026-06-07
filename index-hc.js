@@ -1,7 +1,7 @@
 async function wapper() {
   let domparser = new DOMParser();
 
-  const VERSION = "v2.5.4";
+  const VERSION = "v2.5.5";
   console.log("Running popn class script", VERSION);
 
   const loadingEl = document.createElement("div");
@@ -24,8 +24,8 @@ async function wapper() {
     h: 0,     // 未クリア
     i: 0,     // 未クリア
     j: 0,     // 未クリア
-    k: 10000,  // EASYクリア
-    l: 6250,  // アシストクリア
+    k: 6250,  // EASYクリア
+    l: 10000,  // アシストクリア
     none: 0,  // 未クリア
   };
 
